@@ -1,10 +1,5 @@
 from random import randint
 from tkinter import Tk, Canvas, Frame, BOTH
-import os
-import subprocess
-import threading
-import time
-import tkinter
 
 
 X, Y = (30, 20)
@@ -29,41 +24,29 @@ VALID_MOVES = {
     DOWN: set((DOWN, LEFT, RIGHT))
 }
 
-root = Tk()
-root.geometry('{}x{}'.format(X * BLOCK_SIZE,
-                             Y * BLOCK_SIZE))
-
-frame = Frame()
-frame.master.title('Snake')
-frame.pack(fill=BOTH, expand=1)
-
-canvas = Canvas(frame)
-canvas.pack(fill=BOTH, expand=1)
-
 snake = [(5, 5), (5, 6), (6, 6), (7, 6)]
 food = (7,8)
 direction = RIGHT
 move_queue = []
 points = 0
 speed = 5
-paused = False
 
 
-def draw_rect(x, y, color = '#00f'):
+def draw_rect(canvas, x, y, color = '#00f'):
     x1 = x * BLOCK_SIZE
     y1 = y * BLOCK_SIZE
     x2 = x1 + BLOCK_SIZE
     y2 = y1 + BLOCK_SIZE
-    return canvas.create_rectangle(x1, y1, x2, y2, outline=color, fill=color)
+    return canvas.create_rectangle(x1, y1, x2, y2, outline='', fill=color)
 
 
-def render():
+def render(canvas):
     canvas.delete('all')
 
     for x, y in snake:
-        draw_rect(x, y)
+        draw_rect(canvas, x, y)
     x, y = food
-    draw_rect(x, y, color='#f00')
+    draw_rect(canvas, x, y, color='#f00')
 
 
 def is_inside_snake(next_point):
@@ -133,42 +116,56 @@ def handle_next_movement():
     move_snake(_direction)
 
 
-
-def on_press(event):
-    global paused
-
-    key = event.keysym
-    print('key', key)
-
-    if paused:
-        paused = False
-        tick()
-        return
-
-    if key == KEY_LEFT:
-        move_queue.append(LEFT)
-    elif key == KEY_UP:
-        move_queue.append(UP)
-    elif key == KEY_DOWN:
-        move_queue.append(DOWN)
-    elif key == KEY_RIGHT:
-        move_queue.append(RIGHT)
-    elif key == KEY_P:
-        paused = True
-
-
-def tick():
-    if not paused:
-        handle_next_movement()
-        root.after(int(1000 / speed), tick)
-    render()
-
-
 def main():
+    root = Tk()
+    root.geometry('{}x{}'.format(X * BLOCK_SIZE,
+                                 Y * BLOCK_SIZE))
+
+    frame = Frame()
+    frame.master.title('Snake')
+    frame.pack(fill=BOTH, expand=1)
+
+    canvas = Canvas(frame)
+    canvas.pack(fill=BOTH, expand=1)
+
+    paused = False
+
+
+    def on_press(event):
+        nonlocal paused
+
+        key = event.keysym
+        print('key', key)
+
+        if paused:
+            paused = False
+            tick()
+            return
+
+        if key == KEY_LEFT:
+            move_queue.append(LEFT)
+        elif key == KEY_UP:
+            move_queue.append(UP)
+        elif key == KEY_DOWN:
+            move_queue.append(DOWN)
+        elif key == KEY_RIGHT:
+            move_queue.append(RIGHT)
+        elif key == KEY_P:
+            root.after_cancel(tick_job)
+            paused = True
+
+    tick_job = None
+
+    def tick():
+        nonlocal tick_job
+        if not paused:
+            handle_next_movement()
+            tick_job = root.after(int(1000 / speed), tick)
+        render(canvas)
+
+
     root.bind('<Key>', on_press)
-
-    tick()
-
+    tick_job = tick()
     root.mainloop()
 
 
