@@ -1,12 +1,8 @@
-from pynput import keyboard
-from pynput.keyboard import Key
 from random import randint
-import time
+import curses
 import subprocess
-
-def clear():
-    # on windows this should be cls
-    _ = subprocess.call('clear', shell=True)
+import threading
+import time
 
 LEFT = 'LEFT'
 UP = 'UP'
@@ -33,21 +29,17 @@ points = 0
 speed = 5
 paused = False
 
+window = curses.initscr()
+
 
 def render():
-    clear()
-    _snake = set(snake)
-    for y in range(Y):
-        line = ''
-        for x in range(X):
-            if (x, y) in _snake:
-                line += SNAKE_CHAR
-            elif (x, y) == food:
-                line += FOOD_CHAR
-            else:
-                line += ' '
-        print(line)
-    print('points:', points, 'speed:', speed)
+    for x, y in snake:
+        window.addch(y, x, SNAKE_CHAR)
+    x, y = food
+    window.addch(y, x, FOOD_CHAR)
+    status = 'points: {}, speed: {}'.format(points, speed)
+    window.addstr(Y + 1, 0, status)
+    window.refresh()
 
 
 def is_inside_snake(next_point):
@@ -93,7 +85,8 @@ def move_snake(_direction):
         if not points % LEVEL_THRESHOLD:
             speed += 2
     else:
-        snake.pop(0)
+        x, y = snake.pop(0)
+        window.addch(y, x, ' ')
 
     x, y = next_point
 
@@ -115,32 +108,44 @@ def handle_next_movement():
             _direction = new_direction
     move_snake(_direction)
 
+KEY_LEFT = 68
+KEY_RIGHT = 67
+KEY_UP = 65
+KEY_DOWN = 66
+KEY_P = 112
+
 
 def on_press(key):
     global move_queue
     global paused
 
-    print(key)
-
     if paused:
         paused = False
         return
 
-    if key == Key.left:
+    if key == KEY_LEFT:
         move_queue.append(LEFT)
-    elif key == Key.up:
+    elif key == KEY_UP:
         move_queue.append(UP)
-    elif key == Key.down:
+    elif key == KEY_DOWN:
         move_queue.append(DOWN)
-    elif key == Key.right:
+    elif key == KEY_RIGHT:
         move_queue.append(RIGHT)
-    elif key == 'p':
+    elif key == KEY_P:
         paused = True
 
     render()
 
-listener = keyboard.Listener(on_press=on_press)
-listener.start()
+
+def get_ch():
+    while True:
+        key = window.getch()
+        on_press(key)
+        render()
+
+
+t = threading.Thread(target=get_ch)
+t.start()
 
 while True:
     if not paused:
