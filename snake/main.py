@@ -29,15 +29,13 @@ points = 0
 speed = 5
 paused = False
 
-window = curses.initscr()
 
-
-def render():
+def render(window):
     for x, y in snake:
         window.addch(y, x, SNAKE_CHAR)
     x, y = food
     window.addch(y, x, FOOD_CHAR)
-    status = 'points: {}, speed: {}'.format(points, speed)
+    status = 'points: {}, speed: {}   '.format(points, speed)
     window.addstr(Y + 1, 0, status)
     window.refresh()
 
@@ -60,7 +58,7 @@ def gen_food ():
         food = _gen_food()
     return food
 
-def move_snake(_direction):
+def move_snake(window, _direction):
     global direction
     global food
     global points
@@ -99,19 +97,19 @@ def move_snake(_direction):
     snake.append(next_point)
 
 
-def handle_next_movement():
+def handle_next_movement(window):
     global move_queue
     _direction = direction
     if move_queue:
         new_direction = move_queue.pop(0)
         if new_direction in VALID_MOVES[direction]:
             _direction = new_direction
-    move_snake(_direction)
+    move_snake(window, _direction)
 
-KEY_LEFT = 68
-KEY_RIGHT = 67
-KEY_UP = 65
-KEY_DOWN = 66
+KEY_LEFT = 260
+KEY_RIGHT = 261
+KEY_UP = 259
+KEY_DOWN = 258
 KEY_P = 112
 
 
@@ -134,21 +132,26 @@ def on_press(key):
     elif key == KEY_P:
         paused = True
 
-    render()
 
+def start_loop(window):
+    def get_ch():
+        while True:
+            key = window.getch()
+            on_press(key)
 
-def get_ch():
+    t = threading.Thread(target=get_ch)
+    t.start()
+
     while True:
-        key = window.getch()
-        on_press(key)
-        render()
+        if not paused:
+            handle_next_movement(window)
+        render(window)
+        time.sleep(1 / speed)
 
 
-t = threading.Thread(target=get_ch)
-t.start()
+def main():
+    curses.wrapper(start_loop)
 
-while True:
-    if not paused:
-        handle_next_movement()
-    render()
-    time.sleep(1 / speed)
+
+if __name__ == '__main__':
+    main()
