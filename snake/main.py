@@ -18,6 +18,8 @@ UP = 'UP'
 DOWN = 'DOWN'
 RIGHT = 'RIGHT'
 LEVEL_THRESHOLD = 2
+SNAKE_COLOR = '#00f'
+FOOD_COLOR = '#f00'
 
 DIRECTIONS_BY_KEY = {
     KEY_LEFT: LEFT,
@@ -60,7 +62,7 @@ canvas.pack(fill=BOTH, expand=1)
 tick_job = None
 
 
-def draw_rect(canvas, x, y, color='#00f'):
+def draw_rect(canvas, x, y, color=SNAKE_COLOR):
     x1 = x * BLOCK_SIZE
     y1 = y * BLOCK_SIZE
     x2 = x1 + BLOCK_SIZE
@@ -69,12 +71,14 @@ def draw_rect(canvas, x, y, color='#00f'):
 
 
 def render(canvas):
+    # this could be optimized by moving the tail to the head, or just appending
+    # the head when the snake eats
     canvas.delete('all')
 
     for x, y in game.snake:
         draw_rect(canvas, x, y)
     x, y = game.food
-    draw_rect(canvas, x, y, color='#f00')
+    draw_rect(canvas, x, y, color=FOOD_COLOR)
 
 
 def is_inside_snake(next_point):
