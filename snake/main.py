@@ -1,6 +1,6 @@
+from collections import deque
 from random import randint
 from tkinter import Tk, Canvas, Frame, BOTH
-
 
 X, Y = (30, 20)
 BLOCK_SIZE = 10
@@ -9,13 +9,22 @@ KEY_LEFT = 'Left'
 KEY_RIGHT = 'Right'
 KEY_UP = 'Up'
 KEY_DOWN = 'Down'
-KEY_P = 'p'
+KEY_PAUSE = 'p'
+KEY_QUIT = 'q'
+KEY_RESTART = 'n'
 
 LEFT = 'LEFT'
 UP = 'UP'
 DOWN = 'DOWN'
 RIGHT = 'RIGHT'
 LEVEL_THRESHOLD = 2
+
+DIRECTIONS_BY_KEY = {
+    KEY_LEFT: LEFT,
+    KEY_RIGHT: RIGHT,
+    KEY_UP: UP,
+    KEY_DOWN: DOWN
+}
 
 VALID_MOVES = {
     LEFT: set((LEFT, UP, DOWN)),
@@ -24,15 +33,34 @@ VALID_MOVES = {
     DOWN: set((DOWN, LEFT, RIGHT))
 }
 
-snake = [(5, 5), (5, 6), (6, 6), (7, 6)]
-food = (7,8)
-direction = RIGHT
-move_queue = []
-points = 0
-speed = 5
+
+class Game:
+    def __init__(self):
+        self.snake = deque(((5, 5), (5, 6), (6, 6), (7, 6)))
+        self.food = (7, 8)
+        self.direction = RIGHT
+        self.moves = deque()
+        self.points = 0
+        self.speed = 5
+        self.paused = False
 
 
-def draw_rect(canvas, x, y, color = '#00f'):
+game = Game()
+
+window = Tk()
+window.geometry('{}x{}'.format(X * BLOCK_SIZE, Y * BLOCK_SIZE))
+
+frame = Frame()
+frame.master.title('Snake')
+frame.pack(fill=BOTH, expand=1)
+
+canvas = Canvas(frame)
+canvas.pack(fill=BOTH, expand=1)
+
+tick_job = None
+
+
+def draw_rect(canvas, x, y, color='#00f'):
     x1 = x * BLOCK_SIZE
     y1 = y * BLOCK_SIZE
     x2 = x1 + BLOCK_SIZE
@@ -43,14 +71,14 @@ def draw_rect(canvas, x, y, color = '#00f'):
 def render(canvas):
     canvas.delete('all')
 
-    for x, y in snake:
+    for x, y in game.snake:
         draw_rect(canvas, x, y)
-    x, y = food
+    x, y = game.food
     draw_rect(canvas, x, y, color='#f00')
 
 
 def is_inside_snake(next_point):
-    for point in snake:
+    for point in game.snake:
         if next_point == point:
             return True
     return False
@@ -61,40 +89,42 @@ def _gen_food():
     y = randint(0, Y - 1)
     return (x, y)
 
+
 def gen_food():
     food = _gen_food()
     while is_inside_snake(food):
         food = _gen_food()
     return food
 
-def move_snake(_direction):
-    global direction
-    global food
-    global points
-    global speed
-    direction = _direction
-    x, y = snake[-1]
+
+def get_next_point(direction):
+    game.direction = direction
+    x, y = game.snake[-1]
 
     if direction == LEFT:
-        next_point = (x - 1, y)
+        return (x - 1, y)
     elif direction == UP:
-        next_point = (x, y - 1)
+        return (x, y - 1)
     elif direction == DOWN:
-        next_point = (x, y + 1)
+        return (x, y + 1)
     elif direction == RIGHT:
-        next_point = (x + 1, y)
+        return (x + 1, y)
     else:
         raise ValueError('Invalid direction: ' + direction)
 
-    if next_point == food:
-        food = gen_food()
-        points += 1
-        if not points % LEVEL_THRESHOLD:
-            speed += 2
-        print('points: {}, speed: {}'.format(points, speed))
+
+def move_snake(direction):
+    next_point = get_next_point(direction)
+
+    if next_point == game.food:
+        game.food = gen_food()
+        game.points += 1
+        if not game.points % LEVEL_THRESHOLD:
+            game.speed += 2
+        print('points: {}, speed: {}'.format(game.points, game.speed))
 
     else:
-        snake.pop(0)
+        game.snake.popleft()
 
     x, y = next_point
 
@@ -104,69 +134,56 @@ def move_snake(_direction):
     if is_inside_snake(next_point):
         raise ValueError('You just ate yourself')
 
-    snake.append(next_point)
+    game.snake.append(next_point)
 
 
 def handle_next_movement():
-    _direction = direction
-    if move_queue:
-        new_direction = move_queue.pop(0)
-        if new_direction in VALID_MOVES[direction]:
-            _direction = new_direction
-    move_snake(_direction)
+    direction = game.moves.popleft() if game.moves else game.direction
+    game.direction = direction
+    move_snake(direction)
+
+
+def add_move(direction):
+    prev_direction = game.moves[-1] if game.moves else game.direction
+    if direction in VALID_MOVES[prev_direction]:
+        game.moves.append(direction)
+
+
+def on_press(event):
+    global game
+    key = event.keysym
+
+    if game.paused:
+        game.paused = False
+        tick()
+        return
+
+    if key in DIRECTIONS_BY_KEY:
+        add_move(DIRECTIONS_BY_KEY[key])
+    elif key == KEY_PAUSE:
+        window.after_cancel(tick_job)
+        game.paused = True
+    elif key == KEY_QUIT:
+        window.destroy()
+    elif key == KEY_RESTART:
+        game = Game()
+        window.after_cancel(tick_job)
+        tick()
+
+
+def tick():
+    global tick_job
+    if not game.paused:
+        handle_next_movement()
+        tick_job = window.after(int(1000 / game.speed), tick)
+    render(canvas)
 
 
 def main():
-    root = Tk()
-    root.geometry('{}x{}'.format(X * BLOCK_SIZE,
-                                 Y * BLOCK_SIZE))
-
-    frame = Frame()
-    frame.master.title('Snake')
-    frame.pack(fill=BOTH, expand=1)
-
-    canvas = Canvas(frame)
-    canvas.pack(fill=BOTH, expand=1)
-
-    paused = False
-
-
-    def on_press(event):
-        nonlocal paused
-
-        key = event.keysym
-        print('key', key)
-
-        if paused:
-            paused = False
-            tick()
-            return
-
-        if key == KEY_LEFT:
-            move_queue.append(LEFT)
-        elif key == KEY_UP:
-            move_queue.append(UP)
-        elif key == KEY_DOWN:
-            move_queue.append(DOWN)
-        elif key == KEY_RIGHT:
-            move_queue.append(RIGHT)
-        elif key == KEY_P:
-            root.after_cancel(tick_job)
-            paused = True
-
-    tick_job = None
-
-    def tick():
-        nonlocal tick_job
-        if not paused:
-            handle_next_movement()
-            tick_job = root.after(int(1000 / speed), tick)
-        render(canvas)
-
-
-    root.bind('<Key>', on_press)
-    tick_job = tick()
-    root.mainloop()
+    window.bind('<Key>', on_press)
+    window.resizable(False, False)
+    tick()
+    window.mainloop()
 
 
 if __name__ == '__main__':
