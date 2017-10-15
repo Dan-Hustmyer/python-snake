@@ -36,7 +36,7 @@ def render(window):
     x, y = food
     window.addch(y, x, FOOD_CHAR)
     status = 'points: {}, speed: {}   '.format(points, speed)
-    window.addstr(Y + 1, 0, status)
+    window.addstr(Y + 2, 0, status)
     window.refresh()
 
 
@@ -141,6 +141,11 @@ def start_loop(window):
 
     t = threading.Thread(target=get_ch)
     t.start()
+
+    for y in range(Y):
+        window.addch(y, X, '|')
+    for x in range(X):
+        window.addch(Y, x, '-')
 
     while True:
         if not paused:
