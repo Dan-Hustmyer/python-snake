@@ -1,37 +1,26 @@
 from random import randint
+from tkinter import Tk, Canvas, Frame, BOTH
 import os
 import subprocess
 import threading
 import time
+import tkinter
 
-if os.name == 'nt':
-    KEY_LEFT = b'j'
-    KEY_RIGHT = b'l'
-    KEY_UP = b'i'
-    KEY_DOWN = b'k'
-    KEY_P = b'p'
-    KEY_Q = b'q'
-    CLEAR_CMD = 'cls'
-    from msvcrt import getch
-else:
-    KEY_LEFT = 260
-    KEY_RIGHT = 261
-    KEY_UP = 259
-    KEY_DOWN = 258
-    KEY_P = 112
-    KEY_Q = 113
-    CLEAR_CMD = 'clear'
-    from curses import getch
+
+X, Y = (30, 20)
+BLOCK_SIZE = 10
+
+KEY_LEFT = 'Left'
+KEY_RIGHT = 'Right'
+KEY_UP = 'Up'
+KEY_DOWN = 'Down'
+KEY_P = 'p'
 
 LEFT = 'LEFT'
 UP = 'UP'
 DOWN = 'DOWN'
 RIGHT = 'RIGHT'
-SNAKE_CHAR = '█'
-FOOD_CHAR = '*'
 LEVEL_THRESHOLD = 2
-
-X, Y = (30, 20)
 
 VALID_MOVES = {
     LEFT: set((LEFT, UP, DOWN)),
@@ -39,6 +28,17 @@ VALID_MOVES = {
     UP: set((UP, LEFT, RIGHT)),
     DOWN: set((DOWN, LEFT, RIGHT))
 }
+
+root = Tk()
+root.geometry('{}x{}'.format(X * BLOCK_SIZE + BLOCK_SIZE * 2,
+                             Y * BLOCK_SIZE + BLOCK_SIZE * 2))
+
+frame = Frame()
+frame.master.title('Snake')
+frame.pack(fill=BOTH, expand=1)
+
+canvas = Canvas(frame)
+canvas.pack(fill=BOTH, expand=1)
 
 snake = [(5, 5), (5, 6), (6, 6), (7, 6)]
 food = (7,8)
@@ -49,26 +49,21 @@ speed = 5
 paused = False
 
 
-def clear_screen():
-    _ = subprocess.call(CLEAR_CMD, shell=True)
+def draw_rect(x, y, color = '#00f'):
+    x1 = x * BLOCK_SIZE + BLOCK_SIZE
+    y1 = y * BLOCK_SIZE + BLOCK_SIZE
+    x2 = x1 + BLOCK_SIZE
+    y2 = y1 + BLOCK_SIZE
+    return canvas.create_rectangle(x1, y1, x2, y2, outline=color, fill=color)
 
 
 def render():
-    clear_screen()
-    _snake = set(snake)
-    for y in range(Y):
-        line = ''
-        for x in range(X):
-            if (x, y) in snake:
-                line += SNAKE_CHAR
-            elif (x, y) == food:
-                line += FOOD_CHAR
-            else:
-                line += ' '
-        print(line + '|')
+    canvas.delete('all')
 
-    status = 'points: {}, speed: {}   '.format(points, speed)
-    print(status)
+    for x, y in snake:
+        draw_rect(x, y)
+    x, y = food
+    draw_rect(x, y, color='#f00')
 
 
 def is_inside_snake(next_point):
@@ -113,6 +108,8 @@ def move_snake(_direction):
         points += 1
         if not points % LEVEL_THRESHOLD:
             speed += 2
+        print('points: {}, speed: {}'.format(points, speed))
+
     else:
         snake.pop(0)
 
@@ -128,7 +125,6 @@ def move_snake(_direction):
 
 
 def handle_next_movement():
-    global move_queue
     _direction = direction
     if move_queue:
         new_direction = move_queue.pop(0)
@@ -138,12 +134,15 @@ def handle_next_movement():
 
 
 
-def on_press(key):
-    global move_queue
+def on_press(event):
     global paused
+
+    key = event.keysym
+    print('key', key)
 
     if paused:
         paused = False
+        tick()
         return
 
     if key == KEY_LEFT:
@@ -158,23 +157,19 @@ def on_press(key):
         paused = True
 
 
-def get_ch():
-    while True:
-        key = getch()
-        # print('key', key, KEY_Q, key == KEY_Q)
-        if key == KEY_Q:
-            break
-        on_press(key)
+def tick():
+    if not paused:
+        handle_next_movement()
+        root.after(int(1000 / speed), tick)
+    render()
+
 
 def main():
-    t = threading.Thread(target=get_ch)
-    t.start()
+    root.bind('<Key>', on_press)
 
-    while True:
-        if not paused:
-            handle_next_movement()
-        render()
-        time.sleep(1 / speed)
+    tick()
+
+    root.mainloop()
 
 
 if __name__ == '__main__':
