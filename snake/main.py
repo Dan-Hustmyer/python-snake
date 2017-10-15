@@ -30,8 +30,8 @@ VALID_MOVES = {
 }
 
 root = Tk()
-root.geometry('{}x{}'.format(X * BLOCK_SIZE + BLOCK_SIZE * 2,
-                             Y * BLOCK_SIZE + BLOCK_SIZE * 2))
+root.geometry('{}x{}'.format(X * BLOCK_SIZE,
+                             Y * BLOCK_SIZE))
 
 frame = Frame()
 frame.master.title('Snake')
@@ -50,8 +50,8 @@ paused = False
 
 
 def draw_rect(x, y, color = '#00f'):
-    x1 = x * BLOCK_SIZE + BLOCK_SIZE
-    y1 = y * BLOCK_SIZE + BLOCK_SIZE
+    x1 = x * BLOCK_SIZE
+    y1 = y * BLOCK_SIZE
     x2 = x1 + BLOCK_SIZE
     y2 = y1 + BLOCK_SIZE
     return canvas.create_rectangle(x1, y1, x2, y2, outline=color, fill=color)
