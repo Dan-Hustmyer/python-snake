@@ -1,8 +1,27 @@
 from random import randint
-import curses
+import os
 import subprocess
 import threading
 import time
+
+if os.name == 'nt':
+    KEY_LEFT = b'j'
+    KEY_RIGHT = b'l'
+    KEY_UP = b'i'
+    KEY_DOWN = b'k'
+    KEY_P = b'p'
+    KEY_Q = b'q'
+    CLEAR_CMD = 'cls'
+    from msvcrt import getch
+else:
+    KEY_LEFT = 260
+    KEY_RIGHT = 261
+    KEY_UP = 259
+    KEY_DOWN = 258
+    KEY_P = 112
+    KEY_Q = 113
+    CLEAR_CMD = 'clear'
+    from curses import getch
 
 LEFT = 'LEFT'
 UP = 'UP'
@@ -30,14 +49,26 @@ speed = 5
 paused = False
 
 
-def render(window):
-    for x, y in snake:
-        window.addch(y, x, SNAKE_CHAR)
-    x, y = food
-    window.addch(y, x, FOOD_CHAR)
+def clear_screen():
+    _ = subprocess.call(CLEAR_CMD, shell=True)
+
+
+def render():
+    clear_screen()
+    _snake = set(snake)
+    for y in range(Y):
+        line = ''
+        for x in range(X):
+            if (x, y) in snake:
+                line += SNAKE_CHAR
+            elif (x, y) == food:
+                line += FOOD_CHAR
+            else:
+                line += ' '
+        print(line + '|')
+
     status = 'points: {}, speed: {}   '.format(points, speed)
-    window.addstr(Y + 2, 0, status)
-    window.refresh()
+    print(status)
 
 
 def is_inside_snake(next_point):
@@ -47,18 +78,18 @@ def is_inside_snake(next_point):
     return False
 
 
-def _gen_food ():
+def _gen_food():
     x = randint(0, X - 1)
     y = randint(0, Y - 1)
     return (x, y)
 
-def gen_food ():
+def gen_food():
     food = _gen_food()
     while is_inside_snake(food):
         food = _gen_food()
     return food
 
-def move_snake(window, _direction):
+def move_snake(_direction):
     global direction
     global food
     global points
@@ -83,8 +114,7 @@ def move_snake(window, _direction):
         if not points % LEVEL_THRESHOLD:
             speed += 2
     else:
-        x, y = snake.pop(0)
-        window.addch(y, x, ' ')
+        snake.pop(0)
 
     x, y = next_point
 
@@ -97,20 +127,15 @@ def move_snake(window, _direction):
     snake.append(next_point)
 
 
-def handle_next_movement(window):
+def handle_next_movement():
     global move_queue
     _direction = direction
     if move_queue:
         new_direction = move_queue.pop(0)
         if new_direction in VALID_MOVES[direction]:
             _direction = new_direction
-    move_snake(window, _direction)
+    move_snake(_direction)
 
-KEY_LEFT = 260
-KEY_RIGHT = 261
-KEY_UP = 259
-KEY_DOWN = 258
-KEY_P = 112
 
 
 def on_press(key):
@@ -133,29 +158,23 @@ def on_press(key):
         paused = True
 
 
-def start_loop(window):
-    def get_ch():
-        while True:
-            key = window.getch()
-            on_press(key)
+def get_ch():
+    while True:
+        key = getch()
+        # print('key', key, KEY_Q, key == KEY_Q)
+        if key == KEY_Q:
+            break
+        on_press(key)
 
+def main():
     t = threading.Thread(target=get_ch)
     t.start()
 
-    for y in range(Y):
-        window.addch(y, X, '|')
-    for x in range(X):
-        window.addch(Y, x, '-')
-
     while True:
         if not paused:
-            handle_next_movement(window)
-        render(window)
+            handle_next_movement()
+        render()
         time.sleep(1 / speed)
-
-
-def main():
-    curses.wrapper(start_loop)
 
 
 if __name__ == '__main__':
