@@ -116,7 +116,6 @@ def handle_next_movement():
 
 
 def on_press(event):
-    global game
     key = event.keysym
 
     prev_direction = game.moves[-1] if game.moves else game.direction
