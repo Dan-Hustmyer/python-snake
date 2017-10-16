@@ -17,21 +17,26 @@ Tested on Arch Linux, Mac OS Sierra and Windows 10.
 
 ## Requirements
 
-[Python3][python-link] and `tk`.
+[Python3][python] and [tk-tcl][tk-tcl].
 
 ### Windows
 
-[Download][python-link] and install Python3.
+[Download][python] and install Python 3.
 
 ### Mac OS
 
-Read the [requirements][mac-py-tk-link]. If you are using homebrew,
+Read the [requirements][mac-py-tk]. If you are using homebrew,
 you can just run:
 
 ```bash
 brew install tcl-tk
 brew install python3 --with-tcl-tk
 ```
+
+Without homebrew, download and install:
+
+- [ActiveTcl][tk-tcl]
+- [Python 3][python]
 
 ### Arch Linux
 
@@ -50,5 +55,6 @@ sudo apt-get install python3 python3-tk
 MIT
 
 [screenshot]: https://raw.githubusercontent.com/jeremija/python-snake/master/snake.png
-[python-link]: https://www.python.org/downloads/
-[mac-py-tk-link]: https://www.python.org/download/mac/tcltk/
+[python]: https://www.python.org/downloads/
+[mac-py-tk]: https://www.python.org/download/mac/tcltk/
+[tk-tcl]: https://www.activestate.com/activetcl/downloads
