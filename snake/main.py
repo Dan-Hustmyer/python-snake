@@ -41,17 +41,18 @@ canvas = Canvas(window)
 canvas.pack(fill=BOTH, expand=1)
 
 
-class Game:
-    def __init__(self):
-        self.snake = deque(((5, 5), (5, 6), (6, 6), (7, 6)))
-        self.food = (7, 8)
-        self.direction = KEY_RIGHT
-        self.moves = deque()
-        self.points = 0
-        self.speed = 5
+def create_game():
+    return {
+        'snake': deque(((5, 5), (5, 6), (6, 6), (7, 6))),
+        'food': (7, 8),
+        'direction': KEY_RIGHT,
+        'moves': deque(),
+        'points': 0,
+        'speed': 5
+    }
 
 
-game = Game()
+game = create_game()
 
 
 def draw_rect(x, y, color=SNAKE_COLOR):
@@ -67,9 +68,9 @@ def render():
     # the head when the snake eats
     canvas.delete('all')
 
-    for x, y in game.snake:
+    for x, y in game['snake']:
         draw_rect(x, y)
-    x, y = game.food
+    x, y = game['food']
     draw_rect(x, y, color=FOOD_COLOR)
 
 
@@ -81,22 +82,22 @@ def gen_food(snake):
 
 
 def eat(snake):
-    game.food = gen_food(snake)
-    game.points += 1
-    if not game.points % LEVEL_THRESHOLD:
-        game.speed += 1
-    print('points: {}, speed: {}'.format(game.points, game.speed))
+    game['food'] = gen_food(snake)
+    game['points'] += 1
+    if not game['points'] % LEVEL_THRESHOLD:
+        game['speed'] += 1
+    print('points: {}, speed: {}'.format(game['points'], game['speed']))
 
 
 def move_snake(direction):
-    snake = set(game.snake)
-    u, w = game.snake[-1]
+    snake = set(game['snake'])
+    u, w = game['snake'][-1]
     next_point = MOVEMENTS[direction](u, w)
 
-    if next_point == game.food:
+    if next_point == game['food']:
         eat(snake)
     else:
-        game.snake.popleft()
+        game['snake'].popleft()
 
     x, y = next_point
 
@@ -106,21 +107,21 @@ def move_snake(direction):
     if next_point in snake:
         raise ValueError('You just ate yourself!')
 
-    game.snake.append(next_point)
+    game['snake'].append(next_point)
 
 
 def handle_next_movement():
-    direction = game.moves.popleft() if game.moves else game.direction
-    game.direction = direction
+    direction = game['moves'].popleft() if game['moves'] else game['direction']
+    game['direction'] = direction
     move_snake(direction)
 
 
 def on_press(event):
     key = event.keysym
 
-    prev_direction = game.moves[-1] if game.moves else game.direction
+    prev_direction = game['moves'][-1] if game['moves'] else game['direction']
     if key in VALID_DIRECTIONS[prev_direction]:
-        game.moves.append(key)
+        game['moves'].append(key)
     elif key == KEY_QUIT:
         window.destroy()
 
@@ -128,7 +129,7 @@ def on_press(event):
 def tick():
     handle_next_movement()
     render()
-    window.after(int(1000 / game.speed), tick)
+    window.after(int(1000 / game['speed']), tick)
 
 
 def main():
