@@ -2,7 +2,6 @@ from collections import deque
 from random import randint
 from tkinter import Tk, Canvas, Frame, BOTH
 
-X, Y = (30, 20)
 BLOCK_SIZE = 10
 
 KEY_LEFT = 'Left'
@@ -10,10 +9,6 @@ KEY_RIGHT = 'Right'
 KEY_UP = 'Up'
 KEY_DOWN = 'Down'
 KEY_QUIT = 'q'
-
-LEVEL_THRESHOLD = 2
-SNAKE_COLOR = '#00f'
-FOOD_COLOR = '#f00'
 
 VALID_DIRECTIONS = {
     KEY_LEFT: set((KEY_LEFT, KEY_UP, KEY_DOWN)),
@@ -29,112 +24,142 @@ MOVEMENTS = {
     KEY_DOWN: lambda x, y: (x, y + 1)
 }
 
-window = Tk()
-window.geometry('{}x{}'.format(X * BLOCK_SIZE, Y * BLOCK_SIZE))
-window.resizable(False, False)
 
-frame = Frame()
-frame.master.title('Snake')
-frame.pack(fill=BOTH, expand=1)
+class Snake:
+    def __init__(self):
+        self.direction = KEY_RIGHT
+        self.points = deque(((5, 5), (5, 6), (6, 6), (7, 6)))
+        self.moves = deque()
 
-canvas = Canvas(window)
-canvas.pack(fill=BOTH, expand=1)
+    def shorten(self):
+        self.points.popleft()
+
+    @property
+    def next_move(self):
+        direction = self.moves.popleft() if self.moves else self.direction
+        u, w = self.points[-1]
+        return MOVEMENTS[direction](u, w)
+
+    def move(self, point):
+        self.points.append(point)
+
+    def add_move(self, direction):
+        prev_direction = self.moves[-1] if self.moves else self.direction
+        if direction in VALID_DIRECTIONS[prev_direction]:
+            self.direction = direction
+            self.moves.append(direction)
+
+    @property
+    def head(self):
+        return self.points[-1]
+
+    def is_at(self, point):
+        return self.head == point
+
+    def __contains__(self, point):
+        points = set(self.points)
+        return point in points
 
 
 class Game:
-    def __init__(self):
-        self.snake = deque(((5, 5), (5, 6), (6, 6), (7, 6)))
+    def __init__(self, snake, X, Y, level_threshold=2):
+        self.snake = snake
+        self.X = X
+        self.Y = Y
+        self.level_threshold = level_threshold
         self.food = (7, 8)
-        self.direction = KEY_RIGHT
-        self.moves = deque()
-        self.points = 0
+        self.score = 0
         self.speed = 5
 
+    def add_score(self):
+        self.food = self.gen_food()
+        self.score += 1
+        if not self.score % self.level_threshold:
+            self.speed += 1
+        print('points: {}, speed: {}'.format(self.score, self.speed))
 
-game = Game()
+    def gen_food(self):
+        while True:
+            food = randint(0, self.X - 1), randint(0, self.Y - 1)
+            if food not in self.snake:
+                return food
 
+    def add_move(self, direction):
+        self.snake.add_move(direction)
 
-def draw_rect(x, y, color=SNAKE_COLOR):
-    x1 = x * BLOCK_SIZE
-    y1 = y * BLOCK_SIZE
-    x2 = x1 + BLOCK_SIZE
-    y2 = y1 + BLOCK_SIZE
-    return canvas.create_rectangle(x1, y1, x2, y2, outline='', fill=color)
+    def move_snake(self):
+        snake = self.snake
+        x, y = point = snake.next_move
 
+        if x < 0 or x >= self.X or y < 0 or y >= self.Y:
+            raise ValueError('You crashed into a wall!')
 
-def render():
-    # this could be optimized by moving the tail to the head, or just appending
-    # the head when the snake eats
-    canvas.delete('all')
+        if (x, y) in self.snake:
+            raise ValueError('You just ate yourself!')
 
-    for x, y in game.snake:
-        draw_rect(x, y)
-    x, y = game.food
-    draw_rect(x, y, color=FOOD_COLOR)
+        snake.move(point)
 
-
-def gen_food(snake):
-    while True:
-        food = randint(0, X - 1), randint(0, Y - 1)
-        if food not in snake:
-            return food
-
-
-def eat(snake):
-    game.food = gen_food(snake)
-    game.points += 1
-    if not game.points % LEVEL_THRESHOLD:
-        game.speed += 1
-    print('points: {}, speed: {}'.format(game.points, game.speed))
+        if snake.is_at(self.food):
+            self.add_score()
+        else:
+            self.snake.shorten()
 
 
-def move_snake(direction):
-    snake = set(game.snake)
-    u, w = game.snake[-1]
-    next_point = MOVEMENTS[direction](u, w)
+class UI(Frame):
+    def __init__(self, window, game, snake_color='#00f', food_color='#f00'):
+        super().__init__(window)
+        self.window = window
+        self.game = game
+        self.snake_color = snake_color
+        self.food_color = food_color
 
-    if next_point == game.food:
-        eat(snake)
-    else:
-        game.snake.popleft()
+        self.master.title('Snake')
+        self.pack(fill=BOTH, expand=1)
 
-    x, y = next_point
+        self.canvas = Canvas(window)
+        self.canvas.pack(fill=BOTH, expand=1)
 
-    if x < 0 or x >= X or y < 0 or y >= Y:
-        raise ValueError('You crashed into a wall!')
+    def draw_rect(self, x, y, color):
+        canvas = self.canvas
+        x1 = x * BLOCK_SIZE
+        y1 = y * BLOCK_SIZE
+        x2 = x1 + BLOCK_SIZE
+        y2 = y1 + BLOCK_SIZE
+        return canvas.create_rectangle(x1, y1, x2, y2, outline='', fill=color)
 
-    if next_point in snake:
-        raise ValueError('You just ate yourself!')
+    def render(self):
+        game = self.game
+        self.canvas.delete('all')
 
-    game.snake.append(next_point)
+        for x, y in game.snake.points:
+            self.draw_rect(x, y, color=self.snake_color)
+        x, y = game.food
+        self.draw_rect(x, y, color=self.food_color)
 
+    def on_press(self, event):
+        window = self.window
+        key = event.keysym
 
-def handle_next_movement():
-    direction = game.moves.popleft() if game.moves else game.direction
-    game.direction = direction
-    move_snake(direction)
+        if key in VALID_DIRECTIONS:
+            self.game.add_move(key)
+        elif key == KEY_QUIT:
+            window.destroy()
 
-
-def on_press(event):
-    global game
-    key = event.keysym
-
-    prev_direction = game.moves[-1] if game.moves else game.direction
-    if key in VALID_DIRECTIONS[prev_direction]:
-        game.moves.append(key)
-    elif key == KEY_QUIT:
-        window.destroy()
-
-
-def tick():
-    handle_next_movement()
-    render()
-    window.after(int(1000 / game.speed), tick)
+    def tick(self):
+        game = self.game
+        game.move_snake()
+        self.render()
+        self.window.after(int(1000 / game.speed), self.tick)
 
 
-def main():
-    window.bind('<Key>', on_press)
-    tick()
+def main(X=30, Y=20):
+    window = Tk()
+    window.geometry('{}x{}'.format(X * BLOCK_SIZE, Y * BLOCK_SIZE))
+    window.resizable(False, False)
+    game = Game(Snake(), X=X, Y=Y)
+    ui = UI(window, game)
+    window.bind('<Key>', ui.on_press)
+    ui.tick()
     window.mainloop()
 
 
