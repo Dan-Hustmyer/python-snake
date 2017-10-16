@@ -9,9 +9,7 @@ KEY_LEFT = 'Left'
 KEY_RIGHT = 'Right'
 KEY_UP = 'Up'
 KEY_DOWN = 'Down'
-KEY_PAUSE = 'p'
 KEY_QUIT = 'q'
-KEY_RESTART = 'n'
 
 LEVEL_THRESHOLD = 2
 SNAKE_COLOR = '#00f'
@@ -31,7 +29,6 @@ MOVEMENTS = {
     KEY_DOWN: lambda x, y: (x, y + 1)
 }
 
-
 window = Tk()
 window.geometry('{}x{}'.format(X * BLOCK_SIZE, Y * BLOCK_SIZE))
 window.resizable(False, False)
@@ -43,8 +40,6 @@ frame.pack(fill=BOTH, expand=1)
 canvas = Canvas(window)
 canvas.pack(fill=BOTH, expand=1)
 
-tick_job = None
-
 
 class Game:
     def __init__(self):
@@ -54,7 +49,6 @@ class Game:
         self.moves = deque()
         self.points = 0
         self.speed = 5
-        self.paused = False
 
 
 game = Game()
@@ -125,31 +119,17 @@ def on_press(event):
     global game
     key = event.keysym
 
-    if game.paused:
-        game.paused = False
-        tick()
-        return
-
     prev_direction = game.moves[-1] if game.moves else game.direction
     if key in VALID_DIRECTIONS[prev_direction]:
         game.moves.append(key)
-    elif key == KEY_PAUSE:
-        window.after_cancel(tick_job)
-        game.paused = True
     elif key == KEY_QUIT:
         window.destroy()
-    elif key == KEY_RESTART:
-        game = Game()
-        window.after_cancel(tick_job)
-        tick()
 
 
 def tick():
-    global tick_job
-    if not game.paused:
-        handle_next_movement()
-        tick_job = window.after(int(1000 / game.speed), tick)
+    handle_next_movement()
     render()
+    window.after(int(1000 / game.speed), tick)
 
 
 def main():

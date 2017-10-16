@@ -1,10 +1,13 @@
 # python-snake
 
+A Snake clone written in python in only 100 lines of code. Check out the
+`additional features` branch for more features like Pause and New Game.
+
 ![Screenshot][screenshot]
 
 ## Requirements
 
-Only [Python3 ][python-link]. Linux users have to install the `tk` package.
+[Python3][python-link]. Linux users have to install the `tk` package.
 
 ## Usage
 
