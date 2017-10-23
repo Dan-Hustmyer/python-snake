@@ -33,11 +33,11 @@ window = Tk()
 window.geometry('{}x{}'.format(X * BLOCK_SIZE, Y * BLOCK_SIZE))
 window.resizable(False, False)
 
-frame = Frame()
+frame = Frame(window)
 frame.master.title('Snake')
 frame.pack(fill=BOTH, expand=1)
 
-canvas = Canvas(window)
+canvas = Canvas(frame)
 canvas.pack(fill=BOTH, expand=1)
 
 
